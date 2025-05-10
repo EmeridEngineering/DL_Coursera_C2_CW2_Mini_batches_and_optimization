@@ -647,7 +647,10 @@ def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, nu
         mini_batches = []
         if mini_batch_size is None:
             mini_batches.append((X, Y))
-
+        elif mini_batch_size > 0:
+            mini_batches = generate_mini_batches(X, Y, mini_batch_size)
+        else:
+            print("\033[91mError! Please provide a proper mini batch size")
 
         for mini_batch in mini_batches:
 
@@ -999,3 +1002,43 @@ def verify_gradient(gradients_backward_values, X, Y, layer_dims, parameters, mod
             relative_difference) + "\033[0m")
 
 
+def generate_mini_batches(X,Y,mini_batch_size):
+    """
+    Creates a list of random mini batches from(X,Y)
+
+    Arguments:
+    X -- input data, of shape(input size,number of examples)
+    Y -- true "label" vector (1 for blue dot / 0 for red dot), of shape (1,number of examples)
+    mini_batch_size -- size of the mini-batches,integer
+
+    Returns:
+    mini_batches--list of synchronous (mini_batch_X, mini_batch_Y)
+    """
+
+    mini_batches = []
+    m = Y.shape[1]
+
+    #Shuffle the training data
+    permutation = list(np.random.permutation(m))
+    shuffled_X = X[:, permutation]
+    shuffled_Y = Y[:, permutation].reshape((1,m))
+
+    #Split the shuffled data into mini_batches
+    num_complete_mini_batches = math.floor(m / mini_batch_size)
+    for k in range(num_complete_mini_batches):
+
+        mini_batch_X = shuffled_X[:, k * mini_batch_size: (k+1) * mini_batch_size]
+        mini_batch_Y = shuffled_Y[:, k * mini_batch_size: (k+1) * mini_batch_size]
+
+        mini_batch=(mini_batch_X,mini_batch_Y)
+        mini_batches.append(mini_batch)
+
+    #Checkforincompleteminibatchattheend
+    if m % mini_batch_size != 0:
+        mini_batch_X = shuffled_X[:, num_complete_mini_batches * mini_batch_size: m]
+        mini_batch_Y = shuffled_Y[:, num_complete_mini_batches * mini_batch_size: m]
+
+        mini_batch=(mini_batch_X,mini_batch_Y)
+        mini_batches.append(mini_batch)
+
+    return mini_batches
