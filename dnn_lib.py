@@ -1,3 +1,5 @@
+import math
+
 import h5py
 import numpy as np
 import copy
@@ -606,7 +608,7 @@ def shallow_model_train(X, Y, layers_dims, learning_rate=0.0075, num_iterations=
 
     return parameters, costs
 
-def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, num_iterations=3000, print_cost=False, initialization ="he", lambd=0., keep_prob = None, gradient_verification=False):
+def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, num_iterations=3000, mini_batch_size = None, print_cost=False, initialization ="he", lambd=0., keep_prob = None, gradient_verification=False):
     """
     Implements a L-layer neural network: [LINEAR->RELU]*(L-1)->LINEAR->SIGMOID.
 
@@ -642,16 +644,25 @@ def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, nu
 
     for i in range(num_iterations):
 
-        AL, model_cache = L_layer_model_forward(X,parameters, keep_prob=keep_prob)
+        mini_batches = []
+        if mini_batch_size is None:
+            mini_batches.append((X, Y))
 
-        cost = compute_cost(AL, Y, m, parameters, lambd)
 
-        grads = L_layer_model_backward(AL, Y, model_cache, lambd=lambd, keep_prob=keep_prob)
+        for mini_batch in mini_batches:
 
-        if gradient_verification and i % 5000 == 0:
-            verify_gradient(grads, X, Y, layers_dims, parameters, model_cache, lambd=lambd, keep_prob=keep_prob)
+            (mini_batch_X, mini_batch_Y) = mini_batch
 
-        parameters = update_parameters(parameters, grads, learning_rate)
+            AL, model_cache = L_layer_model_forward(mini_batch_X, parameters, keep_prob=keep_prob)
+
+            cost = compute_cost(AL, mini_batch_Y, m, parameters, lambd)
+
+            grads = L_layer_model_backward(AL, mini_batch_Y, model_cache, lambd=lambd, keep_prob=keep_prob)
+
+            if gradient_verification and i % 5000 == 0:
+                verify_gradient(grads, mini_batch_X, mini_batch_Y, layers_dims, parameters, model_cache, lambd=lambd, keep_prob=keep_prob)
+
+            parameters = update_parameters(parameters, grads, learning_rate)
 
         if print_cost and (i % 100 == 0 or i == num_iterations - 1):
             print("Cost after iteration {}: {}".format(i, np.squeeze(cost)))
@@ -986,3 +997,5 @@ def verify_gradient(gradients_backward_values, X, Y, layer_dims, parameters, mod
     else:
         print("\033[92m" + "Your backward propagation works perfectly fine! difference = " + str(
             relative_difference) + "\033[0m")
+
+
