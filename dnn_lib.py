@@ -608,7 +608,7 @@ def shallow_model_train(X, Y, layers_dims, learning_rate=0.0075, num_iterations=
 
     return parameters, costs
 
-def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, num_iterations=3000, mini_batch_size = None, print_cost=False, initialization ="he", lambd=0., keep_prob = None, gradient_verification=False):
+def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, num_iterations=3000, mini_batch_size = None, print_cost=False, initialization ="he", beta_momentum = 1, lambd=0., keep_prob = None, gradient_verification=False):
     """
     Implements a L-layer neural network: [LINEAR->RELU]*(L-1)->LINEAR->SIGMOID.
 
@@ -666,7 +666,8 @@ def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, nu
             if gradient_verification and i % 5000 == 0:
                 verify_gradient(grads, mini_batch_X, mini_batch_Y, layers_dims, parameters, model_cache, lambd=lambd, keep_prob=keep_prob)
 
-            parameters = update_parameters(parameters, grads, learning_rate)
+            if beta_momentum == 1:
+                parameters = update_parameters(parameters, grads, learning_rate)
 
         cost_average = cost_total / m
 
@@ -1046,3 +1047,29 @@ def generate_mini_batches(X,Y,mini_batch_size):
         mini_batches.append(mini_batch)
 
     return mini_batches
+
+
+def initialize_momentum(parameters):
+    """
+    Initializes the velocity as a python dictionary with:
+                - keys: "dW1", "db1", ..., "dWL", "dbL"
+                - values: numpy arrays of zeros of the same shape as the corresponding gradients/parameters.
+    Arguments:
+    parameters -- python dictionary containing your parameters.
+                    parameters['W' + str(l)] = Wl
+                    parameters['b' + str(l)] = bl
+
+    Returns:
+    momentum -- python dictionary containing the current velocity.
+                    momentum['dW' + str(l)] = velocity of dWl
+                    momentum['db' + str(l)] = velocity of dbl
+    """
+
+    momentum = {}
+    L = len(parameters) // 2
+
+    for l in range(1,L+1):
+        momentum["dW" + str(l)] = np.zeros((parameters['W' + str(l)].shape[0], parameters['W' + str(l)].shape[1]))
+        momentum["db" + str(l)] = np.zeros((parameters['b' + str(l)].shape[0], parameters['b' + str(l)].shape[1]))
+
+    return momentum
