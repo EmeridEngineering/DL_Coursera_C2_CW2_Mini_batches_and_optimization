@@ -316,7 +316,7 @@ def compute_cross_entropy_cost(AL, Y):
     AL[AL == 0.] = 1e-10
     AL[AL == 1.] = 1. - 1e-10
 
-    cost_cross_entropy = - 1./m * (np.dot(Y,np.log(AL).T) + np.dot(1-Y,np.log(1-AL).T))
+    cost_cross_entropy = - (np.dot(Y,np.log(AL).T) + np.dot(1-Y,np.log(1-AL).T))
     cost_cross_entropy = np.squeeze(cost_cross_entropy) # To make sure your cost's shape is what we expect (e.g. this turns [[17]] into 17).
 
     return cost_cross_entropy
@@ -338,7 +338,7 @@ def compute_L2_regularization_cost(m, parameters, lambd):
     L2_norm = 0
     for l in range(1,L+1):
         L2_norm += np.sum(np.square(parameters['W'+str(l)]))
-    cost_L2_regularization = 1/m * lambd/2 * L2_norm
+    cost_L2_regularization = lambd/2 * L2_norm
 
     return cost_L2_regularization
 
