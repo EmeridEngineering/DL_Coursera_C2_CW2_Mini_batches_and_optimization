@@ -652,13 +652,14 @@ def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, nu
         else:
             print("\033[91mError! Please provide a proper mini batch size")
 
+        cost_total = 0
         for mini_batch in mini_batches:
 
             (mini_batch_X, mini_batch_Y) = mini_batch
 
             AL, model_cache = L_layer_model_forward(mini_batch_X, parameters, keep_prob=keep_prob)
 
-            cost = compute_cost(AL, mini_batch_Y, m, parameters, lambd)
+            cost_total += compute_cost(AL, mini_batch_Y, m, parameters, lambd)
 
             grads = L_layer_model_backward(AL, mini_batch_Y, model_cache, lambd=lambd, keep_prob=keep_prob)
 
@@ -667,10 +668,12 @@ def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, nu
 
             parameters = update_parameters(parameters, grads, learning_rate)
 
+        cost_average = cost_total / m
+
         if print_cost and (i % 100 == 0 or i == num_iterations - 1):
-            print("Cost after iteration {}: {}".format(i, np.squeeze(cost)))
+            print("Cost after iteration {}: {}".format(i, np.squeeze(cost_average)))
         if i % 100 == 0:
-            costs.append(cost)
+            costs.append(cost_average)
 
 
 
