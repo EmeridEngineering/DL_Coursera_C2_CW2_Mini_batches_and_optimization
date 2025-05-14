@@ -563,6 +563,41 @@ def update_parameters(params, grads, learning_rate):
 
     return parameters
 
+
+def update_parameters_with_momentum(parameters, grads, learning_rate, beta_momentum, momentum):
+    """
+    Update parameters using Momentum
+
+    Arguments:
+    parameters -- python dictionary containing your parameters:
+                    parameters['W' + str(l)] = Wl
+                    parameters['b' + str(l)] = bl
+    grads -- python dictionary containing your gradients for each parameters:
+                    grads['dW' + str(l)] = dWl
+                    grads['db' + str(l)] = dbl
+    v -- python dictionary containing the current velocity:
+                    v['dW' + str(l)] = ...
+                    v['db' + str(l)] = ...
+    beta -- the momentum hyperparameter, scalar
+    learning_rate -- the learning rate, scalar
+
+    Returns:
+    parameters -- python dictionary containing your updated parameters
+    momentum -- python dictionary containing your updated velocities
+    """
+
+    L = len(parameters) // 2
+
+    for l in range(1, L+1):
+        momentum["dW" + str(l)] = beta_momentum * momentum["dW" + str(l)] + (1 - beta_momentum) * grads["dW" + str(l)]
+        momentum["db" + str(l)] = beta_momentum * momentum["db" + str(l)] + (1 - beta_momentum) * grads["db" + str(l)]
+
+        parameters['W' + str(l)] = parameters['W' + str (l)] - learning_rate * momentum["dW" + str(l)]
+        parameters['b' + str(l)] = parameters['b' + str(l)] - learning_rate * momentum["db" + str(l)]
+
+    return parameters, momentum
+
+
 def shallow_model_train(X, Y, layers_dims, learning_rate=0.0075, num_iterations=3000, print_cost=False):
     """
     Implements a two-layer neural network: LINEAR->RELU->LINEAR->SIGMOID.
@@ -608,7 +643,7 @@ def shallow_model_train(X, Y, layers_dims, learning_rate=0.0075, num_iterations=
 
     return parameters, costs
 
-def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, num_iterations=3000, mini_batch_size = None, print_cost=False, initialization ="he", beta_momentum = 1, lambd=0., keep_prob = None, gradient_verification=False):
+def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, num_iterations=3000, mini_batch_size = None, print_cost=False, initialization ="he", beta_momentum = 0, lambd=0., keep_prob = None, gradient_verification=False):
     """
     Implements a L-layer neural network: [LINEAR->RELU]*(L-1)->LINEAR->SIGMOID.
 
@@ -631,6 +666,7 @@ def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, nu
     L = len(layers_dims)
     m = Y.shape[1]
     grads = {}
+    momentum = {}
     model_cache = {}
     costs = []
     parameters = {}
@@ -641,6 +677,14 @@ def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, nu
         parameters = initialize_parameters_deep_xavier(layers_dims)
     else:
         print ("\033[91mError! Please select correct initialization method")
+
+    if beta_momentum == 0:
+        pass
+    elif 0 < beta_momentum < 1:
+        momentum = initialize_momentum(parameters)
+    else:
+        print("\033[91mError! Please provide correct value of Beta for the momentum")
+
 
     for i in range(num_iterations):
 
@@ -666,8 +710,10 @@ def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, nu
             if gradient_verification and i % 5000 == 0:
                 verify_gradient(grads, mini_batch_X, mini_batch_Y, layers_dims, parameters, model_cache, lambd=lambd, keep_prob=keep_prob)
 
-            if beta_momentum == 1:
+            if beta_momentum == 0:
                 parameters = update_parameters(parameters, grads, learning_rate)
+            if 0 < beta_momentum < 1:
+                parameters, momentum = update_parameters_with_momentum(parameters, grads, learning_rate, beta_momentum, momentum)
 
         cost_average = cost_total / m
 
