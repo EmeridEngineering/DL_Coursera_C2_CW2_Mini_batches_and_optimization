@@ -926,6 +926,7 @@ def calculate_gradients_derivative_approximations(X, Y, parameters, model_cache,
     """
 
     m = Y.shape[1]
+    print(m)
 
     theta = dictionary_to_vector(parameters)
     num_parameters = theta.shape[0]
@@ -949,10 +950,10 @@ def calculate_gradients_derivative_approximations(X, Y, parameters, model_cache,
             print("\033[93m" + "Dropout gradient verification to be developed " + "\033[0m")
 
         AL_plus, _ = L_layer_model_forward(X, vector_to_dictionary(theta_plus, parameters), keep_prob=keep_prob)
-        cost_plus[i] = compute_cost(AL_plus, Y, m, vector_to_dictionary(theta_plus, parameters), lambd=lambd)
+        cost_plus[i] = compute_cost(AL_plus, Y, m, vector_to_dictionary(theta_plus, parameters), lambd=lambd) / m
 
         AL_minus, _ = L_layer_model_forward(X, vector_to_dictionary(theta_minus, parameters), keep_prob=keep_prob)
-        cost_minus[i] = compute_cost(AL_minus, Y, m, vector_to_dictionary(theta_minus, parameters), lambd=lambd)
+        cost_minus[i] = compute_cost(AL_minus, Y, m, vector_to_dictionary(theta_minus, parameters), lambd=lambd) / m
 
         gradients_derivative_approximations[i] = (cost_plus[i] - cost_minus[i]) / (2. * epsilon)
 
