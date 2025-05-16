@@ -594,7 +594,11 @@ def update_parameters_with_momentum(parameters, grads, learning_rate, beta_momen
         momentum["db" + str(l)] = beta_momentum * momentum["db" + str(l)] + (1 - beta_momentum) * grads["db" + str(l)]
 
         if momentum_correction:
-            pass # momentum_corrected["dW" + str(l)] = momentum["dW" + str(l)] / (1 - beta_momentum**t)
+            momentum_corrected["dW" + str(l)] = momentum["dW" + str(l)] / (1. - beta_momentum ** t)
+            momentum_corrected["db" + str(l)] = momentum["db" + str(l)] / (1. - beta_momentum ** t)
+
+            parameters['W' + str(l)] = parameters['W' + str(l)] - learning_rate * momentum_corrected["dW" + str(l)]
+            parameters['b' + str(l)] = parameters['b' + str(l)] - learning_rate * momentum_corrected["db" + str(l)]
         else:
             parameters['W' + str(l)] = parameters['W' + str (l)] - learning_rate * momentum["dW" + str(l)]
             parameters['b' + str(l)] = parameters['b' + str(l)] - learning_rate * momentum["db" + str(l)]
@@ -689,7 +693,7 @@ def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, nu
     else:
         print("\033[91mError! Please provide correct value of Beta for the momentum")
 
-
+    t = 0
     for i in range(num_iterations):
 
         mini_batches = []
@@ -717,7 +721,8 @@ def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, nu
             if beta_momentum == 0:
                 parameters = update_parameters(parameters, grads, learning_rate)
             if 0 < beta_momentum < 1:
-                parameters, momentum = update_parameters_with_momentum(parameters, grads, learning_rate, beta_momentum, momentum, momentum_correction)
+                t += 1
+                parameters, momentum = update_parameters_with_momentum(parameters, grads, learning_rate, beta_momentum, momentum, momentum_correction, t)
 
         cost_average = cost_total / m
 
