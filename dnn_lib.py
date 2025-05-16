@@ -564,7 +564,7 @@ def update_parameters(params, grads, learning_rate):
     return parameters
 
 
-def update_parameters_with_momentum(parameters, grads, learning_rate, beta_momentum, momentum):
+def update_parameters_with_momentum(parameters, grads, learning_rate, beta_momentum, momentum, momentum_correction = False, t=0):
     """
     Update parameters using Momentum
 
@@ -587,13 +587,17 @@ def update_parameters_with_momentum(parameters, grads, learning_rate, beta_momen
     """
 
     L = len(parameters) // 2
+    momentum_corrected = {}
 
     for l in range(1, L+1):
         momentum["dW" + str(l)] = beta_momentum * momentum["dW" + str(l)] + (1 - beta_momentum) * grads["dW" + str(l)]
         momentum["db" + str(l)] = beta_momentum * momentum["db" + str(l)] + (1 - beta_momentum) * grads["db" + str(l)]
 
-        parameters['W' + str(l)] = parameters['W' + str (l)] - learning_rate * momentum["dW" + str(l)]
-        parameters['b' + str(l)] = parameters['b' + str(l)] - learning_rate * momentum["db" + str(l)]
+        if momentum_correction:
+            pass # momentum_corrected["dW" + str(l)] = momentum["dW" + str(l)] / (1 - beta_momentum**t)
+        else:
+            parameters['W' + str(l)] = parameters['W' + str (l)] - learning_rate * momentum["dW" + str(l)]
+            parameters['b' + str(l)] = parameters['b' + str(l)] - learning_rate * momentum["db" + str(l)]
 
     return parameters, momentum
 
@@ -643,7 +647,7 @@ def shallow_model_train(X, Y, layers_dims, learning_rate=0.0075, num_iterations=
 
     return parameters, costs
 
-def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, num_iterations=3000, mini_batch_size = None, print_cost=False, initialization ="he", beta_momentum = 0, lambd=0., keep_prob = None, gradient_verification=False):
+def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, num_iterations=3000, mini_batch_size = None, print_cost=False, initialization ="he", beta_momentum = 0, momentum_correction = False, lambd=0., keep_prob = None, gradient_verification=False):
     """
     Implements a L-layer neural network: [LINEAR->RELU]*(L-1)->LINEAR->SIGMOID.
 
@@ -713,7 +717,7 @@ def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, nu
             if beta_momentum == 0:
                 parameters = update_parameters(parameters, grads, learning_rate)
             if 0 < beta_momentum < 1:
-                parameters, momentum = update_parameters_with_momentum(parameters, grads, learning_rate, beta_momentum, momentum)
+                parameters, momentum = update_parameters_with_momentum(parameters, grads, learning_rate, beta_momentum, momentum, momentum_correction)
 
         cost_average = cost_total / m
 
