@@ -648,6 +648,84 @@ def update_parameters_with_RMS_Propagation(parameters, grads, learning_rate, bet
     return parameters, square
 
 
+def update_parameters_with_adam(parameters, grads, learning_rate, beta_momentum, momentum, beta_square, square, momentum_correction = False, square_correction = False, t = 0, epsilon=1e-8):
+    """
+    Update parameters using Adam
+
+    Arguments:
+    parameters -- python dictionary containing your parameters:
+                    parameters['W' + str(l)] = Wl
+                    parameters['b' + str(l)] = bl
+    grads -- python dictionary containing your gradients for each parameters:
+                    grads['dW' + str(l)] = dWl
+                    grads['db' + str(l)] = dbl
+    learning_rate -- the learning rate, scalar.
+    beta_momentum -- Exponential decay hyperparameter for the first moment estimates
+    momentum -- Adam variable, moving average of the first gradient, python dictionary
+    beta_square -- Exponential decay hyperparameter for the second moment estimates
+    square -- Adam variable, moving average of the squared gradient, python dictionary
+    momentum_correction -- flag enabling the correction of the momentum based on taken steps
+    square_correction -- flag enabling the correction of the square based on taken steps
+    t -- Adam variable, counts the number of taken steps
+    epsilon -- hyperparameter preventing division by zero in Adam updates
+
+    Returns:
+    parameters -- python dictionary containing your updated parameters
+    momentum -- Adam variable, moving average of the first gradient, python dictionary
+    square -- Adam variable, moving average of the squared gradient, python dictionary
+    """
+
+    L = len(parameters) // 2  # number of layers in the neural networks
+    momentum_corrected = {}  # Initializing first moment estimate, python dictionary
+    square_corrected = {}  # Initializing second moment estimate, python dictionary
+
+    # Perform Adam update on all parameters
+    for l in range(1, L + 1):
+        momentum["dW" + str(l)] = beta_momentum * momentum["dW" + str(l)] + (1. - beta_momentum) * grads["dW" + str(l)]
+        momentum["db" + str(l)] = beta_momentum * momentum["db" + str(l)] + (1. - beta_momentum) * grads["db" + str(l)]
+
+        square["dW" + str(l)] = beta_square * square["dW" + str(l)] + (1. - beta_square) * grads["dW" + str(l)] * grads["dW" + str(l)]
+        square["db" + str(l)] = beta_square * square["db" + str(l)] + (1. - beta_square) * grads["db" + str(l)] * grads[
+            "db" + str(l)]
+
+        if momentum_correction is False and square_correction is False:
+            parameters['W' + str(l)] = parameters['W' + str(l)] - learning_rate * momentum["dW" + str(l)] / (np.sqrt(square["dW" + str(l)]) + epsilon)
+            parameters['b' + str(l)] = parameters['b' + str(l)] - learning_rate * momentum["db" + str(l)] / (
+                        np.sqrt(square["db" + str(l)]) + epsilon)
+
+        elif momentum_correction and square_correction is False:
+            momentum_corrected["dW" + str(l)] = momentum["dW" + str(l)] / (1. - beta_momentum ** t)
+            momentum_corrected["db" + str(l)] = momentum["db" + str(l)] / (1. - beta_momentum ** t)
+
+            parameters['W' + str(l)] = parameters['W' + str(l)] - learning_rate * momentum_corrected["dW" + str(l)] / (
+                        np.sqrt(square["dW" + str(l)]) + epsilon)
+            parameters['b' + str(l)] = parameters['b' + str(l)] - learning_rate * momentum_corrected["db" + str(l)] / (
+                        np.sqrt(square["db" + str(l)]) + epsilon)
+
+        elif momentum_correction is False and square_correction:
+            square_corrected["dW" + str(l)] = square["dW" + str(l)] / (1. - beta_square ** t)
+            square_corrected["db" + str(l)] = square["db" + str(l)] / (1. - beta_square ** t)
+
+            parameters['W' + str(l)] = parameters['W' + str(l)] - learning_rate * momentum["dW" + str(l)] / (
+                        np.sqrt(square_corrected["dW" + str(l)]) + epsilon)
+            parameters['b' + str(l)] = parameters['b' + str(l)] - learning_rate * momentum["db" + str(l)] / (
+                        np.sqrt(square_corrected["db" + str(l)]) + epsilon)
+
+        elif momentum_correction and square_correction:
+            momentum_corrected["dW" + str(l)] = momentum["dW" + str(l)] / (1. - beta_momentum ** t)
+            momentum_corrected["db" + str(l)] = momentum["db" + str(l)] / (1. - beta_momentum ** t)
+
+            square_corrected["dW" + str(l)] = square["dW" + str(l)] / (1. - beta_square ** t)
+            square_corrected["db" + str(l)] = square["db" + str(l)] / (1. - beta_square ** t)
+
+            parameters['W' + str(l)] = parameters['W' + str(l)] - learning_rate * momentum_corrected["dW" + str(l)] / (
+                        np.sqrt(square_corrected["dW" + str(l)]) + epsilon)
+            parameters['b' + str(l)] = parameters['b' + str(l)] - learning_rate * momentum_corrected["db" + str(l)] / (
+                        np.sqrt(square_corrected["db" + str(l)]) + epsilon)
+
+    return parameters, momentum, square
+
+
 def shallow_model_train(X, Y, layers_dims, learning_rate=0.0075, num_iterations=3000, print_cost=False):
     """
     Implements a two-layer neural network: LINEAR->RELU->LINEAR->SIGMOID.
@@ -778,7 +856,8 @@ def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, nu
                 parameters, square = update_parameters_with_RMS_Propagation(parameters, grads, learning_rate, beta_square,
                                                                        square, square_correction, t)
             elif 0 < beta_momentum < 1 and 0 < beta_square < 1:
-                pass
+                t += 1
+                parameters, momentum, square = update_parameters_with_adam(parameters, grads, learning_rate, beta_momentum, momentum, beta_square, square, momentum_correction, square_correction, t)
             else:
                 print("\033[91mError! Please provide correct value of Beta for the momentum and square")
 
