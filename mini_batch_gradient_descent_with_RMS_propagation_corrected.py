@@ -7,7 +7,7 @@ train_X, train_Y = load_dataset_moons()
 layers_dims = [train_X.shape[0], 5, 2, 1]
 
 # Train the model
-parameters, costs = train_deep_fully_connected_model(train_X, train_Y, layers_dims, learning_rate=0.007, num_iterations=10000, mini_batch_size=64, beta_square=0.999, square_correction=False, print_cost=True)
+parameters, costs = train_deep_fully_connected_model(train_X, train_Y, layers_dims, learning_rate=0.007, num_iterations=10000, mini_batch_size=64, beta_square=0.999, square_correction=True, print_cost=True)
 plot_costs(costs, learning_rate=0.07)
 
 # Check the train results
