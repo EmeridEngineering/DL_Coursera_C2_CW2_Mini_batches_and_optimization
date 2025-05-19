@@ -606,6 +606,48 @@ def update_parameters_with_momentum(parameters, grads, learning_rate, beta_momen
     return parameters, momentum
 
 
+def update_parameters_with_RMS_Propagation(parameters, grads, learning_rate, beta_square, square, square_correction = False, t=0, square_epsilon = 1e-8):
+    """
+    Update parameters using Root Mean Square propagation
+
+    Arguments:
+    parameters -- python dictionary containing your parameters:
+                    parameters['W' + str(l)] = Wl
+                    parameters['b' + str(l)] = bl
+    grads -- python dictionary containing your gradients for each parameters:
+                    grads['dW' + str(l)] = dWl
+                    grads['db' + str(l)] = dbl
+    v -- python dictionary containing the current velocity:
+                    v['dW' + str(l)] = ...
+                    v['db' + str(l)] = ...
+    beta -- the momentum hyperparameter, scalar
+    learning_rate -- the learning rate, scalar
+
+    Returns:
+    parameters -- python dictionary containing your updated parameters
+    momentum -- python dictionary containing your updated velocities
+    """
+
+    L = len(parameters) // 2
+    square_corrected = {}
+
+    for l in range(1, L+1):
+        square["dW" + str(l)] = beta_square * square["dW" + str(l)] + (1. - beta_square) * grads["dW" + str(l)] * grads["dW" + str(l)]
+        square["db" + str(l)] = beta_square * square["db" + str(l)] + (1. - beta_square) * grads["db" + str(l)] * grads["db" + str(l)]
+
+        if square_correction:
+            square_corrected["dW" + str(l)] = square["dW" + str(l)] / (1. - beta_square ** t)
+            square_corrected["db" + str(l)] = square["db" + str(l)] / (1. - beta_square ** t)
+
+            parameters['W' + str(l)] = parameters['W' + str(l)] - learning_rate * grads["dW" + str(l)] / (np.sqrt(square_corrected["dW" + str(l)]) + square_epsilon)
+            parameters['b' + str(l)] = parameters['b' + str(l)] - learning_rate * grads["db" + str(l)] / (np.sqrt(square_corrected["db" + str(l)]) + square_epsilon)
+        else:
+            parameters['W' + str(l)] = parameters['W' + str(l)] - learning_rate * grads["dW" + str(l)] / (np.sqrt(square["dW" + str(l)]) + square_epsilon)
+            parameters['b' + str(l)] = parameters['b' + str(l)] - learning_rate * grads["db" + str(l)] / (np.sqrt(square["db" + str(l)]) + square_epsilon)
+
+    return parameters, square
+
+
 def shallow_model_train(X, Y, layers_dims, learning_rate=0.0075, num_iterations=3000, print_cost=False):
     """
     Implements a two-layer neural network: LINEAR->RELU->LINEAR->SIGMOID.
@@ -651,7 +693,7 @@ def shallow_model_train(X, Y, layers_dims, learning_rate=0.0075, num_iterations=
 
     return parameters, costs
 
-def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, num_iterations=3000, mini_batch_size = None, print_cost=False, initialization ="he", beta_momentum = 0, momentum_correction = False, lambd=0., keep_prob = None, gradient_verification=False):
+def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, num_iterations=3000, mini_batch_size = None, print_cost=False, initialization ="he", beta_momentum = 0, momentum_correction = False, beta_square = 0, square_correction = False, lambd=0., keep_prob = None, gradient_verification=False):
     """
     Implements a L-layer neural network: [LINEAR->RELU]*(L-1)->LINEAR->SIGMOID.
 
@@ -675,6 +717,7 @@ def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, nu
     m = Y.shape[1]
     grads = {}
     momentum = {}
+    square = {}
     model_cache = {}
     costs = []
     parameters = {}
@@ -692,6 +735,13 @@ def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, nu
         momentum = initialize_momentum(parameters)
     else:
         print("\033[91mError! Please provide correct value of Beta for the momentum")
+
+    if beta_square == 0:
+        pass
+    elif 0 < beta_square < 1:
+        square = initialize_RootMeanSquare_Propagation(parameters)
+    else:
+        print("\033[91mError! Please provide correct value of Beta for the RMS propagation")
 
     t = 0
     for i in range(num_iterations):
@@ -718,11 +768,20 @@ def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, nu
             if gradient_verification and i % 5000 == 0:
                 verify_gradient(grads, mini_batch_X, mini_batch_Y, layers_dims, parameters, model_cache, lambd=lambd, keep_prob=keep_prob)
 
-            if beta_momentum == 0:
+            if beta_momentum == 0 and beta_square == 0:
                 parameters = update_parameters(parameters, grads, learning_rate)
-            if 0 < beta_momentum < 1:
+            elif 0 < beta_momentum < 1 and beta_square == 0:
                 t += 1
                 parameters, momentum = update_parameters_with_momentum(parameters, grads, learning_rate, beta_momentum, momentum, momentum_correction, t)
+            elif beta_momentum == 0 and 0 < beta_square < 1:
+                t += 1
+                parameters, square = update_parameters_with_RMS_Propagation(parameters, grads, learning_rate, beta_square,
+                                                                       square, square_correction, t)
+            elif 0 < beta_momentum < 1 and 0 < beta_square < 1:
+                pass
+            else:
+                print("\033[91mError! Please provide correct value of Beta for the momentum and square")
+
 
         cost_average = cost_total / m
 
@@ -1106,7 +1165,7 @@ def generate_mini_batches(X,Y,mini_batch_size):
 
 def initialize_momentum(parameters):
     """
-    Initializes the velocity as a python dictionary with:
+    Initializes the momentum as a python dictionary with:
                 - keys: "dW1", "db1", ..., "dWL", "dbL"
                 - values: numpy arrays of zeros of the same shape as the corresponding gradients/parameters.
     Arguments:
@@ -1128,3 +1187,29 @@ def initialize_momentum(parameters):
         momentum["db" + str(l)] = np.zeros((parameters['b' + str(l)].shape[0], parameters['b' + str(l)].shape[1]))
 
     return momentum
+
+
+def initialize_RootMeanSquare_Propagation(parameters):
+    """
+    Initializes the square as a python dictionary with:
+                - keys: "dW1", "db1", ..., "dWL", "dbL"
+                - values: numpy arrays of zeros of the same shape as the corresponding gradients/parameters.
+    Arguments:
+    parameters -- python dictionary containing your parameters.
+                    parameters['W' + str(l)] = Wl
+                    parameters['b' + str(l)] = bl
+
+    Returns:
+    square -- python dictionary that will contain the exponentially weighted average of the squared gradient. Initialized with zeros.
+                    s["dW" + str(l)] = ...
+                    s["db" + str(l)] = ...
+    """
+
+    square = {}
+    L = len(parameters) // 2
+
+    for l in range(1,L+1):
+        square["dW" + str(l)] = np.zeros((parameters['W' + str(l)].shape[0], parameters['W' + str(l)].shape[1]))
+        square["db" + str(l)] = np.zeros((parameters['b' + str(l)].shape[0], parameters['b' + str(l)].shape[1]))
+
+    return square
