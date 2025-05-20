@@ -771,7 +771,7 @@ def shallow_model_train(X, Y, layers_dims, learning_rate=0.0075, num_iterations=
 
     return parameters, costs
 
-def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, num_iterations=3000, mini_batch_size = None, print_cost=False, initialization ="he", beta_momentum = 0, momentum_correction = False, beta_square = 0, square_correction = False, lambd=0., keep_prob = None, gradient_verification=False):
+def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, num_iterations=3000, mini_batch_size = None, print_cost=False, initialization ="he", beta_momentum = 0, momentum_correction = False, beta_square = 0, square_correction = False, learning_rate_decay_rate = 0, lambd=0., keep_prob = None, gradient_verification=False):
     """
     Implements a L-layer neural network: [LINEAR->RELU]*(L-1)->LINEAR->SIGMOID.
 
@@ -799,6 +799,7 @@ def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, nu
     model_cache = {}
     costs = []
     parameters = {}
+    learning_rate_initial = learning_rate
 
     if initialization == "he":
         parameters = initialize_parameters_deep_he(layers_dims)
@@ -831,6 +832,13 @@ def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, nu
             mini_batches = generate_mini_batches(X, Y, mini_batch_size)
         else:
             print("\033[91mError! Please provide a proper mini batch size")
+
+        if learning_rate_decay_rate == 0:
+            pass
+        elif learning_rate_decay_rate > 0:
+            learning_rate = update_learning_rate(learning_rate_initial, learning_rate_decay_rate, i)
+        else:
+            print("\033[91mError! Please provide a proper decay rate for learning rate")
 
         cost_total = 0
         for mini_batch in mini_batches:
@@ -1292,3 +1300,20 @@ def initialize_RootMeanSquare_Propagation(parameters):
         square["db" + str(l)] = np.zeros((parameters['b' + str(l)].shape[0], parameters['b' + str(l)].shape[1]))
 
     return square
+
+
+def update_learning_rate(learning_rate_initial, learning_rate_decay_rate, epoch_num):
+    """
+    Calculates the updated learning rate using exponential weight decay.
+
+    Arguments:
+    learning_rate_initial -- Initial learning rate. Scalar
+    learning_rate_decay_rate -- Decay rate. Scalar
+    epoch_num -- Epoch number. Integer
+
+    Returns:
+    learning_rate -- Updated learning rate. Scalar
+    """
+    learning_rate = learning_rate_initial / (1. + learning_rate_decay_rate * epoch_num)
+
+    return learning_rate
