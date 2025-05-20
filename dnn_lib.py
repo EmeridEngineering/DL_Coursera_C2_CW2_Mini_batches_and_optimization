@@ -771,7 +771,7 @@ def shallow_model_train(X, Y, layers_dims, learning_rate=0.0075, num_iterations=
 
     return parameters, costs
 
-def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, num_iterations=3000, mini_batch_size = None, print_cost=False, initialization ="he", beta_momentum = 0, momentum_correction = False, beta_square = 0, square_correction = False, learning_rate_decay_rate = 0, lambd=0., keep_prob = None, gradient_verification=False):
+def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, num_iterations=3000, mini_batch_size = None, print_cost=False, initialization ="he", beta_momentum = 0, momentum_correction = False, beta_square = 0, square_correction = False, learning_rate_decay_rate = 0, learning_rate_decay_schedule_interval = 1, lambd=0., keep_prob = None, gradient_verification=False):
     """
     Implements a L-layer neural network: [LINEAR->RELU]*(L-1)->LINEAR->SIGMOID.
 
@@ -836,7 +836,7 @@ def train_deep_fully_connected_model(X, Y, layers_dims, learning_rate=0.0075, nu
         if learning_rate_decay_rate == 0:
             pass
         elif learning_rate_decay_rate > 0:
-            learning_rate = update_learning_rate(learning_rate_initial, learning_rate_decay_rate, i)
+            learning_rate = update_learning_rate(learning_rate_initial, learning_rate_decay_rate, i, learning_rate_decay_schedule_interval)
         else:
             print("\033[91mError! Please provide a proper decay rate for learning rate")
 
@@ -1302,7 +1302,7 @@ def initialize_RootMeanSquare_Propagation(parameters):
     return square
 
 
-def update_learning_rate(learning_rate_initial, learning_rate_decay_rate, epoch_num):
+def update_learning_rate(learning_rate_initial, learning_rate_decay_rate, epoch_num, learning_rate_decay_schedule_interval):
     """
     Calculates the updated learning rate using exponential weight decay.
 
@@ -1314,6 +1314,11 @@ def update_learning_rate(learning_rate_initial, learning_rate_decay_rate, epoch_
     Returns:
     learning_rate -- Updated learning rate. Scalar
     """
-    learning_rate = learning_rate_initial / (1. + learning_rate_decay_rate * epoch_num)
+    if learning_rate_decay_schedule_interval == 1:
+        learning_rate = learning_rate_initial / (1. + learning_rate_decay_rate * epoch_num)
+    elif learning_rate_decay_schedule_interval > 1:
+        learning_rate = learning_rate_initial / (1. + learning_rate_decay_rate * np.floor(epoch_num / learning_rate_decay_schedule_interval))
+    else:
+        print("\033[91mError! Please provide a proper schedule interval for learning rate decay")
 
     return learning_rate
